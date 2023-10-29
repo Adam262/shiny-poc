@@ -1,33 +1,36 @@
 library(shiny)
+
+# hot load changes in development
+options(shiny.autoreload = TRUE)
+
+sideSliderInput <- function(name) {
+  sliderInput(name, name, value = 10, min = 0, max = 100, step = 1)
+}
+
 ui <- function(request) {
   fluidPage(
-    sidebarLayout(
-      sidebarPanel(
-        sliderInput("omega", "omega", value = 2, min = -2, max = 2, step = 0.01),
-        sliderInput("delta", "delta", value = 1, min = 0, max = 2, step = 0.01),
-        sliderInput("damping", "damping", value = 1, min = 0.9, max = 1, step = 0.001),
-        numericInput("length", "length", value = 100),
-        # bookmarkButton()
-      ),
-      mainPanel(
-        plotOutput("fig")
-      )
+    mainPanel(
+      sideSliderInput("length"),
+      sideSliderInput("width"),
+      checkboxInput("check1", "Not in query state"),
     )
   )
 }
 server <- function(input, output, session) {
-  t <- reactive(seq(0, input$length, length = input$length * 100))
-  x <- reactive(sin(input$omega * t() + input$delta) * input$damping ^ t())
-  y <- reactive(sin(t()) * input$damping ^ t())
-
-  output$fig <- renderPlot({
-    plot(x(), y(), axes = FALSE, xlab = "", ylab = "", type = "l", lwd = 2)
-  }, res = 96)
+  # Exclude vector of input IDs from query params
+  setBookmarkExclude(c("check1"))
   
   observe({
-    reactiveValuesToList(input)
     session$doBookmark()
   })
+
+  # after bookmarkmarking event, render query params in browser 
   onBookmarked(updateQueryString)
 }
+
+# set bookmarking option, it can be one of:
+
+#   * `url` -- write to query params, eg localhost:5551/?_inputs_&width=50&length=100
+#   * `server` -- write to file. The file name is appended to url, eg localhost?_state_id_=020928f10faae863
+#   * `none` -- valid, but you would never do this, just omit `enableBookmarking`
 shinyApp(ui, server, enableBookmarking = "url")
